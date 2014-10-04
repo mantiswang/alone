@@ -1,0 +1,17 @@
+
+# Ignore files build by xcode
+
+.DS_Store
+
+#Eclipse project files
+
+.classpath
+.project
+.settings/
+
+# Others
+target/
+logs/
+
+
+
