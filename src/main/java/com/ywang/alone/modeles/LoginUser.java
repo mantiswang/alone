@@ -1,5 +1,7 @@
 package com.ywang.alone.modeles;
 
+import java.util.Calendar;
+
 import com.alibaba.fastjson.annotation.JSONField;
 
 public class LoginUser {
@@ -13,7 +15,18 @@ public class LoginUser {
 	@JSONField(name="latitude")
 	private String latitude;
 	
+	private long timestamp;
 	
+	public long getTimestamp() {
+		return Calendar.getInstance().getTimeInMillis();
+	}
+
+
+	public void setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
+	}
+
+
 	public String getUname() {
 		return uname;
 	}
@@ -57,7 +70,8 @@ public class LoginUser {
 	@Override
 	public String toString() {
 		return "LoginUser [uname=" + uname + ", pword=" + pword
-				+ ", longitude=" + longitude + ", latitude=" + latitude + "]";
+				+ ", longitude=" + longitude + ", latitude=" + latitude
+				+ ", timestamp=" + timestamp + "]";
 	}
 	
 }
