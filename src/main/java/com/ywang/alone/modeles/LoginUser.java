@@ -1,77 +1,57 @@
+
 package com.ywang.alone.modeles;
 
-import java.util.Calendar;
+public class LoginUser extends BaseInfo {
 
-import com.alibaba.fastjson.annotation.JSONField;
-
-public class LoginUser {
-
-	@JSONField(name="uname")
-	private String uname;
-	@JSONField(name="pword")
-	private String pword;
-	@JSONField(name="longitude")
-	private String longitude;
-	@JSONField(name="latitude")
-	private String latitude;
-	
+	//手机号码
+	private String phoneNum;
+	//密码
+	private String password;
+	//登录时间
 	private long timestamp;
+	//纬度
+	private String lat;
+	//经度
+	private String lng;
 	
-	public long getTimestamp() {
-		return Calendar.getInstance().getTimeInMillis();
+	public String getPhoneNum() {
+		return phoneNum;
 	}
 
+	public void setPhoneNum(String phoneNum) {
+		this.phoneNum = phoneNum;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public long getTimestamp() {
+		return timestamp;
+	}
 
 	public void setTimestamp(long timestamp) {
 		this.timestamp = timestamp;
 	}
 
-
-	public String getUname() {
-		return uname;
+	public String getLat() {
+		return lat;
 	}
 
-
-	public void setUname(String uname) {
-		this.uname = uname;
+	public void setLat(String lat) {
+		this.lat = lat;
 	}
 
-
-	public String getPword() {
-		return pword;
+	public String getLng() {
+		return lng;
 	}
 
-
-	public void setPword(String pword) {
-		this.pword = pword;
+	public void setLng(String lng) {
+		this.lng = lng;
 	}
 
-
-	public String getLongitude() {
-		return longitude;
-	}
-
-
-	public void setLongitude(String longitude) {
-		this.longitude = longitude;
-	}
-
-
-	public String getLatitude() {
-		return latitude;
-	}
-
-
-	public void setLatitude(String latitude) {
-		this.latitude = latitude;
-	}
-
-
-	@Override
-	public String toString() {
-		return "LoginUser [uname=" + uname + ", pword=" + pword
-				+ ", longitude=" + longitude + ", latitude=" + latitude
-				+ ", timestamp=" + timestamp + "]";
-	}
-	
 }
