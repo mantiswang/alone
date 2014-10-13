@@ -4,18 +4,6 @@ package com.ywang.alone.modeles;
 /*
  * 
  * Alone
- * 
- * osVersion=4.4.2
- * appVersion=1.3
- * systemType=android
- * email=389565326%40qq.com
- * deviceToken=
- * lng=117.157929
- * debug=0
- * password=a203dfa74808f3d5e3aac80695d3b8a1
- * phoneModel=MI+3
- * lat=31.873428
- * key=
  *
  *
  * @author apple
@@ -23,90 +11,75 @@ package com.ywang.alone.modeles;
  * @since 1.0
  */
 public class UserInfo{
-	
-//	"sinaUid": "",
-//	"weight": "45.0",
-//	"serviceDate": "1413000322287",
-//	"discriptions": "",
-//	"recorderDate": "",
-//	"interests": "",
-//	"location": "",
-//	"voiceMessage": "",
-//	"roleName": "",
-//	"purpose": "",
-//	"debug": "0",
-//	"messagePassword": "5a31d82a4a02aa128fb7c6c26de23d6c",
-//	"phoneModel": "MI 3",
-//	"id": "100160812",
-//	"height": "45.0",
-//	"messageHost": "theltest.com",
-//	"nickName": "",
-//	"livecity": "",
-//	"age": "17",
-//	"horoscope": "",
-//	"key": "V7XqO1tEN3Eumm6J",
-//	"music": "",
-//	"books": "",
-//	"occupation": "",
-//	"others": "",
-//	"osVersion": "4.4.2",
-//	"systemType": "android",
-//	"movie": "",
-//	"avatar": "",
-//	"travelcity": "",
-//	"intro": "",
-//	"sinaToken": "",
-//	"appVersion": "1.3",
-//	"food": "",
-//	"blacklist": "",
-//	"messageUser": "acountuser100160812",
-//	"sinaTokenSecret": "",
-//	"locked": "0",
-//	"ethnicity": ""
-	
-	
 	/*
 	 * 距离
 	 */
 	private String distance;
-	/*
-	 * 种族
-	 */
-	private String ethnicity;
+	private String key;
+	
+	private String userId;
+		
+    ///////////////////////基本资料//////////////////////
 	/*
 	 * 头像
 	 */
 	private String avatar;
 	/*
-	 * 体重
+	 * 昵称
 	 */
-	private String weight;
-
-	/*
-	 * 兴趣
-	 */
-	private String interests;
-	/*
-	 * 活动范围
-	 */
-	private String location;
-	/*
-	 * 目的
-	 */
-	private String purpose;
+	private String nickName;
 	/*
 	 * 年龄
 	 */
 	private String age;
 	/*
-	 * 
-	 */
-	private String livecity;
-	/*
 	 * 星座
 	 */
 	private String horoscope;
+	/*
+	 * 身高
+	 */
+	private String height;
+	/*
+	 * 体重
+	 */
+	private String weight;
+	/*
+	 * 角色
+	 */
+	private String roleName;
+	/*
+	 * 感情状态
+	 */
+	private String affection;
+	/*
+	 * 目的
+	 */
+	private String purpose;
+
+	
     ///////////////////////详细资料//////////////////////
+	/*
+	 * 种族
+	 */
+	private String ethnicity;
+	/*
+	 * 职业
+	 */
+	private String occupation;
+	/*
+	 * 居住地
+	 */
+	private String livecity;
+
+	/*
+	 * 活动范围
+	 */
+	private String location;
+	/*
+	 * 旅行地
+	 */
+	private String travelcity;
 	
 	///////////////////////兴趣爱好//////////////////////
 	/*
@@ -135,4 +108,213 @@ public class UserInfo{
 	 * 详细自述
 	 */
 	private String intro;
+
+    ///////////////////////消息系统/////////////////////
+	private String messageUser;
+	private String messagePwd;
+	
+	public String getDistance() {
+		return distance;
+	}
+
+	public void setDistance(String distance) {
+		this.distance = distance;
+	}
+
+	public String getKey() {
+		return key;
+	}
+
+	public void setKey(String key) {
+		this.key = key;
+	}
+
+	public String getUserId() {
+		return userId;
+	}
+
+	public void setUserId(String userId) {
+		this.userId = userId;
+	}
+
+	public String getAvatar() {
+		return avatar;
+	}
+
+	public void setAvatar(String avatar) {
+		this.avatar = avatar;
+	}
+
+	public String getNickName() {
+		return nickName;
+	}
+
+	public void setNickName(String nickName) {
+		this.nickName = nickName;
+	}
+
+	public String getAge() {
+		return age;
+	}
+
+	public void setAge(String age) {
+		this.age = age;
+	}
+
+	public String getHoroscope() {
+		return horoscope;
+	}
+
+	public void setHoroscope(String horoscope) {
+		this.horoscope = horoscope;
+	}
+
+	public String getHeight() {
+		return height;
+	}
+
+	public void setHeight(String height) {
+		this.height = height;
+	}
+
+	public String getWeight() {
+		return weight;
+	}
+
+	public void setWeight(String weight) {
+		this.weight = weight;
+	}
+
+	public String getRoleName() {
+		return roleName;
+	}
+
+	public void setRoleName(String roleName) {
+		this.roleName = roleName;
+	}
+
+	public String getAffection() {
+		return affection;
+	}
+
+	public void setAffection(String affection) {
+		this.affection = affection;
+	}
+
+	public String getPurpose() {
+		return purpose;
+	}
+
+	public void setPurpose(String purpose) {
+		this.purpose = purpose;
+	}
+
+	public String getEthnicity() {
+		return ethnicity;
+	}
+
+	public void setEthnicity(String ethnicity) {
+		this.ethnicity = ethnicity;
+	}
+
+	public String getOccupation() {
+		return occupation;
+	}
+
+	public void setOccupation(String occupation) {
+		this.occupation = occupation;
+	}
+
+	public String getLivecity() {
+		return livecity;
+	}
+
+	public void setLivecity(String livecity) {
+		this.livecity = livecity;
+	}
+
+	public String getLocation() {
+		return location;
+	}
+
+	public void setLocation(String location) {
+		this.location = location;
+	}
+
+	public String getTravelcity() {
+		return travelcity;
+	}
+
+	public void setTravelcity(String travelcity) {
+		this.travelcity = travelcity;
+	}
+
+	public String getMovie() {
+		return movie;
+	}
+
+	public void setMovie(String movie) {
+		this.movie = movie;
+	}
+
+	public String getMusic() {
+		return music;
+	}
+
+	public void setMusic(String music) {
+		this.music = music;
+	}
+
+	public String getBooks() {
+		return books;
+	}
+
+	public void setBooks(String books) {
+		this.books = books;
+	}
+
+	public String getFood() {
+		return food;
+	}
+
+	public void setFood(String food) {
+		this.food = food;
+	}
+
+	public String getOthers() {
+		return others;
+	}
+
+	public void setOthers(String others) {
+		this.others = others;
+	}
+
+	public String getIntro() {
+		return intro;
+	}
+
+	public void setIntro(String intro) {
+		this.intro = intro;
+	}
+
+	public String getMessageUser() {
+		return messageUser;
+	}
+
+	public void setMessageUser(String messageUser) {
+		this.messageUser = messageUser;
+	}
+
+	public String getMessagePwd() {
+		return messagePwd;
+	}
+
+	public void setMessagePwd(String messagePwd) {
+		this.messagePwd = messagePwd;
+	}
+	
+	
+	
+	
+	
 }

@@ -26,6 +26,8 @@ import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.apache.commons.lang3.RandomStringUtils;
+
 /*
  * song
  *
@@ -61,6 +63,17 @@ public class MD5 {
 		return getMD5String(s.getBytes());
 	}
 
+	/**
+	 * 生成字符串的md5校验值 取中间16位
+	 * 
+	 * @param s
+	 * @return
+	 */
+	public static String getMD5TokenString(String s) {
+		return getMD5String(s.getBytes()).substring(8, 24);
+	}
+	
+	
 	/**
 	 * 判断字符串的md5校验码是否与一个已知的md5码相匹配
 	 * 
@@ -142,15 +155,22 @@ public class MD5 {
 	}
 
 	public static void main(String[] args) throws IOException {
-		long begin = System.currentTimeMillis();
-
-		File file = new File("C:/12345.txt");
-		String md5 = getFileMD5String(file);
-
-		// String md5 = getMD5String("a");
-
-		long end = System.currentTimeMillis();
-		System.out.println("md5:" + md5 + " time:" + ((end - begin) / 1000)
-				+ "s");
+//		long begin = System.currentTimeMillis();
+//
+//		File file = new File("C:/12345.txt");
+//		String md5 = getFileMD5String(file);
+//
+//		// String md5 = getMD5String("a");
+//
+//		long end = System.currentTimeMillis();
+//		System.out.println("md5:" + md5 + " time:" + ((end - begin) / 1000)
+//				+ "s");
+		
+		String r = RandomStringUtils.random(16);
+		System.out.println(r);
+		String md5String = getMD5String("15256551134"+System.currentTimeMillis());
+		System.out.println(md5String);
+		System.out.println(md5String.intern());
+		
 	}
 }
