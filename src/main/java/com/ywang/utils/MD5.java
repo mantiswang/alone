@@ -166,11 +166,13 @@ public class MD5 {
 //		System.out.println("md5:" + md5 + " time:" + ((end - begin) / 1000)
 //				+ "s");
 		
-		String r = RandomStringUtils.random(16);
-		System.out.println(r);
-		String md5String = getMD5String("15256551134"+System.currentTimeMillis());
-		System.out.println(md5String);
-		System.out.println(md5String.intern());
+//		String r = RandomStringUtils.random(16);
+//		System.out.println(r);
+//		String md5String = getMD5String("15256551134"+System.currentTimeMillis());
+//		System.out.println(md5String);
+//		System.out.println(md5String.intern());
+		
+		System.out.println(System.currentTimeMillis());
 		
 	}
 }

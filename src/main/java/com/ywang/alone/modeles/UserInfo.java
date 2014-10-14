@@ -1,5 +1,7 @@
 package com.ywang.alone.modeles;
 
+import java.util.Date;
+
 
 /*
  * 
@@ -18,7 +20,8 @@ public class UserInfo{
 	private String key;
 	
 	private String userId;
-		
+	private String online;	
+	private Date   lastLoginTime; 
     ///////////////////////基本资料//////////////////////
 	/*
 	 * 头像
@@ -121,6 +124,14 @@ public class UserInfo{
 		this.distance = distance;
 	}
 
+	public Date getLastLoginTime() {
+		return lastLoginTime;
+	}
+
+	public void setLastLoginTime(Date lastLoginTime) {
+		this.lastLoginTime = lastLoginTime;
+	}
+
 	public String getKey() {
 		return key;
 	}
@@ -135,6 +146,14 @@ public class UserInfo{
 
 	public void setUserId(String userId) {
 		this.userId = userId;
+	}
+
+	public String getOnline() {
+		return online;
+	}
+
+	public void setOnline(String online) {
+		this.online = online;
 	}
 
 	public String getAvatar() {

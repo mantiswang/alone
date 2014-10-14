@@ -21,7 +21,7 @@ import java.sql.SQLException;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.pool.DruidPooledConnection;
-import com.ywang.utils.PropertiesUtil;
+import com.ywang.utils.AloneConfiguration;
 
 /*
  * song
@@ -38,7 +38,7 @@ public class DataSourceFactory {
 		
 		dataSource = new DruidDataSource();
 
-		PropertiesUtil config = new PropertiesUtil("dbConfig.properties");
+		AloneConfiguration config = AloneConfiguration.getInstance();
 		
 		dataSource.setUrl(config.getDbURL());
 		dataSource.setUsername(config.getDbUserName());

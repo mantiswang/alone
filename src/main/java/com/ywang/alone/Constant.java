@@ -31,6 +31,7 @@ public class Constant {
 		int USER_EXISTS = 9001;
 		int LOGIN_FAIL = 9002;
 		int TOKEN_UPDATE_FAIL = 9003;
+		int NO_ACCESS_AUTH = 9004;
 	}
 	
 	public interface ErrorDesc
@@ -38,5 +39,6 @@ public class Constant {
 		String USER_EXISTS = "用户已经存在";
 		String LOGIN_FAIL = "用户不存在或者密码错误";
 		String TOKEN_UPDATE_FAIL = "更新token失败";
+		String NO_ACCESS_AUTH = "请先登录";
 	}
 }

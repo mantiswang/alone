@@ -32,22 +32,35 @@ import java.util.Properties;
  *
  * @since 1.0
  */
-public class PropertiesUtil {
+public class AloneConfiguration {
 	private Properties props;
-//	private URI uri;
+	private static AloneConfiguration instance;
+	private static final String PROP_FILENAME = "Config.properties";
+	
+	// private URI uri;
+	// 初始化方法。
+	public static AloneConfiguration getInstance() {
 
-	public PropertiesUtil(String fileName) {
-		readProperties(fileName);
+		if (null == instance) {
+			instance = new AloneConfiguration();
+		}
+
+		return instance;
+	}
+
+	private AloneConfiguration() {
+		readProperties(PROP_FILENAME);
 	}
 
 	private void readProperties(String fileName) {
 		try {
 			props = new Properties();
-			String path = PropertiesUtil.class.getClassLoader().getResource("").toURI().getPath();
-//			InputStream fis = getClass().getResourceAsStream(fileName);
+			String path = AloneConfiguration.class.getClassLoader().getResource("")
+					.toURI().getPath();
+			// InputStream fis = getClass().getResourceAsStream(fileName);
 			InputStream fis = new FileInputStream(new File(path + fileName));
 			props.load(fis);
-//			uri = this.getClass().getResource("dbConfig.properties").toURI();
+			// uri = this.getClass().getResource("dbConfig.properties").toURI();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -80,25 +93,6 @@ public class PropertiesUtil {
 	public void printProperties() {
 		props.list(System.out);
 	}
-
-//	/**
-//	 * 写入properties信息
-//	 */
-//	public void writeProperties(String key, String value) {
-//		try {
-//			OutputStream fos = new FileOutputStream(new File(uri));
-//			props.setProperty(key, value);
-//			// 将此 Properties 表中的属性列表（键和元素对）写入输出流
-//			props.store(fos, "『comments』Update key：" + key);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//	}
-
-//	public static void main(String[] args) {
-//		PropertiesUtil util = new PropertiesUtil("src/dbConfig.properties");
-//		util.writeProperties("dbtype", "MSSQL");
-//	}
 
 	/**
 	 * @return
@@ -145,4 +139,12 @@ public class PropertiesUtil {
 				.getProperty("server.db.connLiveTimeMillis"));
 
 	}
+
+	/**
+	 * 页面数量大小
+	 */
+	public int globalPageSize() {
+		return Integer.valueOf(props.getProperty("global.list.pageSize"));
+	}
+
 }
