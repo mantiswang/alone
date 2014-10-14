@@ -21,7 +21,8 @@ public class UserInfo{
 	
 	private String userId;
 	private String online;	
-	private Date   lastLoginTime; 
+	private Long   regTime;
+	private Long   lastLoginTime; 
     ///////////////////////基本资料//////////////////////
 	/*
 	 * 头像
@@ -124,13 +125,7 @@ public class UserInfo{
 		this.distance = distance;
 	}
 
-	public Date getLastLoginTime() {
-		return lastLoginTime;
-	}
-
-	public void setLastLoginTime(Date lastLoginTime) {
-		this.lastLoginTime = lastLoginTime;
-	}
+	
 
 	public String getKey() {
 		return key;
@@ -154,6 +149,23 @@ public class UserInfo{
 
 	public void setOnline(String online) {
 		this.online = online;
+	}
+
+
+	public Long getRegTime() {
+		return regTime;
+	}
+
+	public void setRegTime(Long regTime) {
+		this.regTime = regTime;
+	}
+
+	public Long getLastLoginTime() {
+		return lastLoginTime;
+	}
+
+	public void setLastLoginTime(Long lastLoginTime) {
+		this.lastLoginTime = lastLoginTime;
 	}
 
 	public String getAvatar() {
@@ -330,6 +342,22 @@ public class UserInfo{
 
 	public void setMessagePwd(String messagePwd) {
 		this.messagePwd = messagePwd;
+	}
+
+	@Override
+	public String toString() {
+		return "UserInfo [distance=" + distance + ", key=" + key + ", userId="
+				+ userId + ", online=" + online + ", lastLoginTime="
+				+ lastLoginTime + ", avatar=" + avatar + ", nickName="
+				+ nickName + ", age=" + age + ", horoscope=" + horoscope
+				+ ", height=" + height + ", weight=" + weight + ", roleName="
+				+ roleName + ", affection=" + affection + ", purpose="
+				+ purpose + ", ethnicity=" + ethnicity + ", occupation="
+				+ occupation + ", livecity=" + livecity + ", location="
+				+ location + ", travelcity=" + travelcity + ", movie=" + movie
+				+ ", music=" + music + ", books=" + books + ", food=" + food
+				+ ", others=" + others + ", intro=" + intro + ", messageUser="
+				+ messageUser + ", messagePwd=" + messagePwd + "]";
 	}
 	
 	

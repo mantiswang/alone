@@ -22,6 +22,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.UUID;
 
@@ -127,20 +128,19 @@ public class AuthTask {
 
 			JSONArray nearbyUserArray = new JSONArray();
 			UserInfo userInfo = null;
-			ResultSet nearbyRs = stmt.executeQuery();
+			ResultSet nearbyRs = nearbyStmt.executeQuery();
 			while (nearbyRs.next()) {
 
 				userInfo = new UserInfo();
-				userInfo.setUserId(rs.getString("USER_ID"));
-				userInfo.setAvatar(rs.getString("AVATAR"));
-				userInfo.setNickName(rs.getString("NICKNAME"));
-				userInfo.setAge(rs.getString("AGE"));
-				userInfo.setRoleName(rs.getString("ROLENAME"));
-				userInfo.setOnline(rs.getString("ONLINE"));
-				userInfo.setLastLoginTime(new Date(rs
-						.getDate("LAST_LOGIN_TIME").getTime()));
-				userInfo.setIntro(rs.getString("INTRO"));
-				userInfo.setDistance(rs.getString("DISTANCE"));
+				userInfo.setUserId(nearbyRs.getString("USER_ID"));
+				userInfo.setAvatar(nearbyRs.getString("AVATAR"));
+				userInfo.setNickName(nearbyRs.getString("NICKNAME"));
+				userInfo.setAge(nearbyRs.getString("AGE"));
+				userInfo.setRoleName(nearbyRs.getString("ROLENAME"));
+				userInfo.setOnline(nearbyRs.getString("ONLINE"));
+				userInfo.setLastLoginTime(nearbyRs.getLong("LAST_LOGIN_TIME"));
+				userInfo.setIntro(nearbyRs.getString("INTRO"));
+				userInfo.setDistance(nearbyRs.getString("DISTANCE"));
 
 				nearbyUserArray.add(userInfo);
 			}
@@ -176,14 +176,14 @@ public class AuthTask {
 	 *            {
 	 *            'phoneNum':'ywang','password':'e10adc3949ba59abbe56e057f20f883
 	 *            e ','lng':'117.157954','lat':'31.873432',
-	 *            'deviceToken':'8a2597aa1d37d432a88a446d82b6561e','osVersion':'8
-	 *            . 0 ' , 'systemType':'iOS','phoneModel':'iPhone 5s'}
+	 *            'deviceToken':'8a2597aa1d37d432a88a446d82b6561e','osVersion':'
+	 *            8 . 0 ' , 'systemType':'iOS','phoneModel':'iPhone 5s'}
 	 * 
 	 *            OR
 	 * 
 	 *            {'key':'2597aa1d37d432a','lng':'117.157954','lat':'31.873432',
-	 *            'deviceToken':'8a2597aa1d37d432a88a446d82b6561e','osVersion':'8
-	 *            . 0 ' , 'systemType':'iOS','phoneModel':'iPhone 5s'}
+	 *            'deviceToken':'8a2597aa1d37d432a88a446d82b6561e','osVersion':'
+	 *            8 . 0 ' , 'systemType':'iOS','phoneModel':'iPhone 5s'}
 	 * 
 	 * @return
 	 */
@@ -203,12 +203,13 @@ public class AuthTask {
 				needUpdateToken = true;
 				String uuid = UUID.randomUUID().toString();
 				uuid = uuid.replaceAll("-", "");
-				token = MD5.getMD5TokenString(uuid);
+				token = MD5.getMD5String(uuid);
 
 				stmt = conn
 						.prepareStatement("select * from userbase where PHONE_NUM = ? and PWD = ?");
 				stmt.setString(1, user.getString("phoneNum"));
 				stmt.setString(2, user.getString("password"));
+				
 			} else {
 				stmt = conn
 						.prepareStatement("select * from userbase where PKEY = ? ");
@@ -216,10 +217,9 @@ public class AuthTask {
 			}
 
 			ResultSet rs = stmt.executeQuery();
-
 			if (rs.next()) {
-
 				UserInfo userInfo = new UserInfo();
+				userInfo.setRegTime(rs.getLong("REG_TIME"));
 				userInfo.setUserId(rs.getString("USER_ID"));
 				userInfo.setAvatar(rs.getString("AVATAR"));
 				userInfo.setNickName(rs.getString("NICKNAME"));
@@ -244,51 +244,53 @@ public class AuthTask {
 				userInfo.setMessagePwd(rs.getString("MESSAGE_PWD"));
 				userInfo.setMessageUser(rs.getString("MESSAGE_USER"));
 				userInfo.setKey(token);
-
+				userInfo.setOnline("1");
+				
 				jsonObject.put("data", JSONObject.toJSON(userInfo));
-			} else {
+				
+				// 更新token 最后登录时间
+				PreparedStatement updatestmt = null;
+				if (needUpdateToken) {
+					updatestmt = conn
+							.prepareStatement("update userbase set PKEY = ?, LAST_LOGIN_TIME = ? , OS_VERSION=? , SYSTEM_TYPE=? , PHONE_MODEL=? , DEVICE_TOKEN=? , LNG=? , LAT=? , ONLINE='1' WHERE USER_ID=?");
+					updatestmt.setString(1, token);
+					updatestmt.setLong(2,System.currentTimeMillis());
+					updatestmt.setString(3, user.getString("osVersion"));
+					updatestmt.setString(4, user.getString("systemType"));
+					updatestmt.setString(5, user.getString("phoneModel"));
+					updatestmt.setString(6, user.getString("deviceToken"));
+					updatestmt.setString(7, user.getString("lng"));
+					updatestmt.setString(8, user.getString("lat"));
+					updatestmt.setString(9, userInfo.getUserId());
+				} else {
+					updatestmt = conn
+							.prepareStatement("update userbase set LAST_LOGIN_TIME = ? , LNG=? , LAT=? , OS_VERSION=? , SYSTEM_TYPE=? , PHONE_MODEL=? , DEVICE_TOKEN= ? , ONLINE='1'  WHERE USER_ID=?");
+					updatestmt.setLong(1,System.currentTimeMillis());
+					updatestmt.setString(2, user.getString("lng"));
+					updatestmt.setString(3, user.getString("lat"));
+					updatestmt.setString(4, user.getString("osVersion"));
+					updatestmt.setString(5, user.getString("systemType"));
+					updatestmt.setString(6, user.getString("phoneModel"));
+					updatestmt.setString(7, user.getString("deviceToken"));
+					updatestmt.setString(8, userInfo.getUserId());
+				}
+				int result = updatestmt.executeUpdate();
+
+				if (result != 1) {
+					jsonObject.put("ret", 1);
+					jsonObject.put("errCode", Constant.ErrorCode.TOKEN_UPDATE_FAIL);
+					jsonObject.put("errDesc", Constant.ErrorDesc.TOKEN_UPDATE_FAIL);
+				}
+				updatestmt.close();
+			} 
+			else
+			{
 				jsonObject.put("ret", 1);
 				jsonObject.put("errCode", Constant.ErrorCode.LOGIN_FAIL);
 				jsonObject.put("errDesc", Constant.ErrorDesc.LOGIN_FAIL);
 			}
-
+			
 			rs.close();
-
-			// 更新token 最后登录时间
-			PreparedStatement updatestmt = null;
-			if (needUpdateToken) {
-				updatestmt = conn
-						.prepareStatement("update userbase set PKEY = ? and LAST_LOGIN_TIME = ? and OS_VERSION=? and SYSTEM_TYPE=? and PHONE_MODEL=? and DEVICE_TOKEN=? and LNG=? and LAT=?");
-				updatestmt.setString(1, token);
-				updatestmt.setDate(2,
-						new java.sql.Date(System.currentTimeMillis()));
-				updatestmt.setString(3, user.getString("osVersion"));
-				updatestmt.setString(4, user.getString("systemType"));
-				updatestmt.setString(5, user.getString("phoneModel"));
-				updatestmt.setString(6, user.getString("deviceToken"));
-				updatestmt.setString(7, user.getString("lng"));
-				updatestmt.setString(8, user.getString("lat"));
-			} else {
-				updatestmt = conn
-						.prepareStatement("update userbase set LAST_LOGIN_TIME = ? and LNG=? and LAT=?  and OS_VERSION=? and SYSTEM_TYPE=? and PHONE_MODEL=? and DEVICE_TOKEN=? ");
-				updatestmt.setDate(1,
-						new java.sql.Date(System.currentTimeMillis()));
-				updatestmt.setString(2, user.getString("lng"));
-				updatestmt.setString(3, user.getString("lat"));
-				updatestmt.setString(4, user.getString("osVersion"));
-				updatestmt.setString(5, user.getString("systemType"));
-				updatestmt.setString(6, user.getString("phoneModel"));
-				updatestmt.setString(7, user.getString("deviceToken"));
-			}
-			int result = updatestmt.executeUpdate();
-
-			if (result != 1) {
-				jsonObject.put("ret", 1);
-				jsonObject.put("errCode", Constant.ErrorCode.TOKEN_UPDATE_FAIL);
-				jsonObject.put("errDesc", Constant.ErrorDesc.TOKEN_UPDATE_FAIL);
-			}
-			updatestmt.close();
-
 			conn.commit();
 			conn.setAutoCommit(true);
 		} catch (SQLException e) {
@@ -306,8 +308,7 @@ public class AuthTask {
 				LoggerUtil.logServerErr(e.getMessage());
 			}
 		}
-
-		return jsonObject.toString();
+		return jsonObject.toJSONString();
 	}
 
 	/**
@@ -341,18 +342,19 @@ public class AuthTask {
 				jsonObject.put("ret", 1);
 				jsonObject.put("errCode", Constant.ErrorCode.USER_EXISTS);
 				jsonObject.put("errDesc", Constant.ErrorDesc.USER_EXISTS);
-				JSONObject userId = new JSONObject();
-				userId.put("userId", rs.getInt("USER_ID"));
-				jsonObject.put("data", userId);
+				
 			} else {
+				String uuid = UUID.randomUUID().toString();
+				uuid = uuid.replaceAll("-", "");
+				String token = MD5.getMD5String(uuid);
+				
 				PreparedStatement updatestmt = conn
 						.prepareStatement(
 								"insert into userbase (PHONE_NUM, PWD, REG_TIME, LNG, LAT, DEVICE_TOKEN, SYSTEM_TYPE, OS_VERSION,PHONE_MODEL, PKEY) VALUES (?,?,?, ?,?,?,?,?,?,?)",
 								Statement.RETURN_GENERATED_KEYS);
 				updatestmt.setString(1, user.getString("phoneNum").trim());
 				updatestmt.setString(2, user.getString("password").trim());
-				updatestmt.setDate(3,
-						new java.sql.Date(System.currentTimeMillis()));
+				updatestmt.setLong(3,System.currentTimeMillis());
 				updatestmt.setString(4, user.getString("lng").trim());
 				updatestmt.setString(5, user.getString("lat").trim());
 
@@ -360,18 +362,53 @@ public class AuthTask {
 				updatestmt.setString(7, user.getString("systemType").trim());
 				updatestmt.setString(8, user.getString("osVersion").trim());
 				updatestmt.setString(9, user.getString("phoneModel").trim());
-				updatestmt.setString(10, user.getString("key").trim());
+				updatestmt.setString(10, token);
 
 				int result = updatestmt.executeUpdate();
 
-				conn.commit();
 				if (result == 1) {
 
 					ResultSet idRS = updatestmt.getGeneratedKeys();
 					if (idRS.next()) {
-						JSONObject userId = new JSONObject();
-						userId.put("userId", idRS.getInt(1));
-						jsonObject.put("data", userId);
+						int userId = idRS.getInt(1);
+						PreparedStatement userInfoStmt = conn
+								.prepareStatement("select * from userbase where USER_ID = ? ");
+						userInfoStmt.setInt(1, userId);
+						
+						ResultSet userInfoRs = userInfoStmt.executeQuery();
+						if (userInfoRs.next()) {
+							UserInfo userInfo = new UserInfo();
+							userInfo.setRegTime(userInfoRs.getLong("REG_TIME"));
+							userInfo.setUserId(userInfoRs.getString("USER_ID"));
+							userInfo.setAvatar(userInfoRs.getString("AVATAR"));
+							userInfo.setNickName(userInfoRs.getString("NICKNAME"));
+							userInfo.setAge(userInfoRs.getString("AGE"));
+							userInfo.setHoroscope(userInfoRs.getString("HORO_SCOPE"));
+							userInfo.setHeight(userInfoRs.getString("HEIGHT"));
+							userInfo.setWeight(userInfoRs.getString("WEIGHT"));
+							userInfo.setRoleName(userInfoRs.getString("ROLENAME"));
+							userInfo.setAffection(userInfoRs.getString("AFFECTION"));
+							userInfo.setPurpose(userInfoRs.getString("PURPOSE"));
+							userInfo.setEthnicity(userInfoRs.getString("ETHNICITY"));
+							userInfo.setOccupation(userInfoRs.getString("OCCUPATION"));
+							userInfo.setLivecity(userInfoRs.getString("LIVECITY"));
+							userInfo.setLocation(userInfoRs.getString("LOCATION"));
+							userInfo.setTravelcity(userInfoRs.getString("TRAVELCITY"));
+							userInfo.setMovie(userInfoRs.getString("MOVIE"));
+							userInfo.setMusic(userInfoRs.getString("MUSIC"));
+							userInfo.setBooks(userInfoRs.getString("BOOKS"));
+							userInfo.setFood(userInfoRs.getString("FOOD"));
+							userInfo.setOthers(userInfoRs.getString("OTHERS"));
+							userInfo.setIntro(userInfoRs.getString("INTRO"));
+							userInfo.setMessagePwd(userInfoRs.getString("MESSAGE_PWD"));
+							userInfo.setMessageUser(userInfoRs.getString("MESSAGE_USER"));
+							userInfo.setKey(userInfoRs.getString("PKEY"));
+							userInfo.setOnline("1");
+							
+							jsonObject.put("data", JSONObject.toJSON(userInfo));
+						}
+						userInfoRs.close();
+						userInfoStmt.close();
 					}
 					idRS.close();
 					jsonObject.put("ret", 0);
@@ -403,4 +440,51 @@ public class AuthTask {
 
 		return jsonObject.toString();
 	}
+
+	public static void main(String[] args) {
+
+
+		/*
+		 * 测试注册
+
+		
+		ArrayList<String> regInfos = new ArrayList<String>();
+		regInfos.add("{'phoneNum':'15256551134','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.057954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'18018956659','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.557954','lat':'31.103432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 4s','key':''}");
+		regInfos.add("{'phoneNum':'18018256907','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.668041','lat':'32.068562','osVersion':'7.0.2','systemType':'iOS','phoneModel':'iPhone 4','key':''}");
+		regInfos.add("{'phoneNum':'13856796230','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'116.812721','lat':'33.303466','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'15256554567','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.454687','lat':'33.816950','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'15967565765','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.000954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'15973485765','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.000954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'15945678798','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.000954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'18783675836','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.123954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'18753764584','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.102954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'18746146342','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.030954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'18957265846','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.085954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		regInfos.add("{'phoneNum':'18076236598','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.573954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}");
+		for (String string : regInfos) {
+			System.out.println(AuthTask.execute(REG_NEW_USER, string));
+		}
+		*/
+//		System.out.println(AuthTask.execute(REG_NEW_USER, "{'phoneNum':'15967565765','password':'e10adc3949ba59abbe56e057f20f883e','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','lng':'117.000954','lat':'31.173432','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s','key':''}"));
+		/*
+		 * 测试登录 
+//		 String loginInfoString = "{'phoneNum':'15256551134','password':'e10adc3949ba59abbe56e057f20f883e','lng':'117.157954','lat':'31.873432','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s'}";
+		 String loginInfoString = "{'key':'51a7f79b7528da0cf2fc92e0750148da','lng':'117.157954','lat':'31.873432','deviceToken':'8a2597aa1d37d432a88a446d82b6561e','osVersion':'8.0','systemType':'iOS','phoneModel':'iPhone 5s'}";
+
+		 String loginRet = AuthTask.execute(LOGIN, loginInfoString);
+		 
+		 System.out.println(loginRet);
+		 */
+		
+		
+		/* 测试附近 */
+		String nearbyString = "{'key':'51a7f79b7528da0cf2fc92e0750148da','lng':'117.157954','lat':'31.873432','currPage':'1','pageSize':'50'}";
+		String nearbyRet = AuthTask.execute(NEARBY, nearbyString);
+		System.out.println(nearbyRet);
+		
+		
+//		String regRet = AuthTask.execute(REG_NEW_USER, regString);
+	}
+	
 }
