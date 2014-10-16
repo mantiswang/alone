@@ -774,14 +774,4 @@ standard deployment descriptor.
 -->
 <web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:web="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
   <display-name>Archetype Created Web Application</display-name>
-  <servlet>
-    <description></description>
-    <display-name>UploadAvatarServlet</display-name>
-    <servlet-name>UploadAvatarServlet</servlet-name>
-    <servlet-class>com.ywang.alone.servlet.UploadAvatarServlet</servlet-class>
-  </servlet>
-  <servlet-mapping>
-    <servlet-name>UploadAvatarServlet</servlet-name>
-    <url-pattern>/UploadAvatarServlet</url-pattern>
-  </servlet-mapping>
 </web-app>

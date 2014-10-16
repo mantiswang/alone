@@ -18,7 +18,9 @@ import com.ywang.utils.LoggerUtil;
  * Servlet implementation class UploadAvatarServlet
  */
 @WebServlet(name = "UploadAvatarServlet", urlPatterns = { "/api/uploadAvatar" })
-@MultipartConfig
+@MultipartConfig(fileSizeThreshold=1024*1024*10, 	// 10 MB 
+maxFileSize=1024*1024*50,      	// 50 MB
+maxRequestSize=1024*1024*100)
 public class UploadAvatarServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
@@ -52,6 +54,7 @@ public class UploadAvatarServlet extends HttpServlet {
 		out.println("此文件类型：" + part.getContentType() + "<br />");
 		out.println("文本框内容：" + request.getParameter("name") + "<br />");
 		out.println(UploadUtil.getFileName(part) + "<br />");
+		out.println(UploadUtil.getFileType(part));
 		part.write("1." + UploadUtil.getFileType(part));
 	}
 
