@@ -72,13 +72,25 @@ public class AuthTask {
 
 	/**
 	 * 关注 {
-	 * 'key':'2597aa1d37d432a',
+	 * 'key':'2597aa1d37d432a','fid':'1020293'
 	 * }
 	 * @param param 
 	 * @return
 	 */
-	private static String follow(String param) {
-		return null;
+	private static String follow(String msg) {
+		JSONObject jsonObject = AloneUtil.newRetJsonObject();
+		JSONObject param = JSON.parseObject(msg);
+	    String token = param.getString("key");
+	    
+	    if (StringUtils.isEmpty(token)) {
+			jsonObject.put("ret", 1);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+			return jsonObject.toJSONString();
+		}
+	    
+	    
+		return jsonObject.toJSONString();
 	}
 
 	/**
