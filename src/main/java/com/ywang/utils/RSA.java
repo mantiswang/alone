@@ -101,7 +101,7 @@ public class RSA {
 			InvalidKeyException, NoSuchPaddingException,
 			IllegalBlockSizeException, BadPaddingException {
 		RSA rsa = new RSA();
-		String msg = "郭XX-精品相声";
+		String msg = "100038555";
 		// KeyPairGenerator类用于生成公钥和私钥对，基于RSA算法生成对象
 		KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
 		// 初始化密钥对生成器，密钥大小为1024位

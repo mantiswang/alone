@@ -19,6 +19,8 @@ package com.ywang.alone.utils;
 
 import javax.servlet.http.Part;
 
+import com.ywang.utils.LoggerUtil;
+
 /*
  * alone
  *
@@ -28,10 +30,9 @@ import javax.servlet.http.Part;
  */
 public class UploadUtil {
 	public static String getFileType(Part p) {
-		String name = p.getHeader("content-disposition");
-		String fileNameTmp = name.substring(name.indexOf("filename=") + 10);
-		String type = fileNameTmp.substring(fileNameTmp.indexOf(".") + 1,
-				fileNameTmp.indexOf("\""));
+		String name = UploadUtil.getFileName(p);
+		LoggerUtil.logMsg(name);
+		String type = name.substring(name.lastIndexOf(".") + 1);
 		return type;
 	}
 

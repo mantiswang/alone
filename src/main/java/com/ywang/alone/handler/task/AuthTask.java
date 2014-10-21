@@ -50,8 +50,8 @@ public class AuthTask {
 
 	private static final int REG_NEW_USER = 1;
 	private static final int LOGIN = 2;
-
 	private static final int NEARBY = 3;
+	private static final int FOLLOW = 4;
 
 	public static String execute(int code, String param) {
 
@@ -62,9 +62,22 @@ public class AuthTask {
 			return login(param);
 		case NEARBY:
 			return nearby(param);
+		case FOLLOW:
+			return follow(param);
 		default:
 			break;
 		}
+		return null;
+	}
+
+	/**
+	 * 关注 {
+	 * 'key':'2597aa1d37d432a',
+	 * }
+	 * @param param 
+	 * @return
+	 */
+	private static String follow(String param) {
 		return null;
 	}
 

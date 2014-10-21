@@ -28,17 +28,25 @@ public class Constant {
 
 	public interface ErrorCode
 	{
+		int SYS_ERR     = 1001;
 		int USER_EXISTS = 9001;
 		int LOGIN_FAIL = 9002;
 		int TOKEN_UPDATE_FAIL = 9003;
 		int NO_ACCESS_AUTH = 9004;
+		int PARAM_ILLEGAL  = 9008;
+		int UPDATE_DB_FAIL = 9006;
+		
+		
 	}
 	
 	public interface ErrorDesc
 	{
+		String SYS_ERR     = "系统异常";
 		String USER_EXISTS = "用户已经存在";
 		String LOGIN_FAIL = "用户不存在或者密码错误";
 		String TOKEN_UPDATE_FAIL = "更新token失败";
 		String NO_ACCESS_AUTH = "请先登录";
+		String PARAM_ILLEGAL = "参数错误！";
+		String UPDATE_DB_FAIL = "更新数据失败！";
 	}
 }

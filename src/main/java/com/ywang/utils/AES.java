@@ -32,9 +32,9 @@ public class AES {
         /*
          * 加密用的Key 可以用26个字母和数字组成，最好不要用保留字符，虽然不会错，至于怎么裁决，个人看情况而定
          */
-        String cKey = "1l1l1lll11lll1l1";
+        String cKey = "0000000000000000";
         // 需要加密的字串
-        String cSrc = "我多么不舍朋友爱的那么苦痛；只有点遗憾难过";
+        String cSrc = "100038555";
         // 加密
         long lStart = System.currentTimeMillis();
         String enString = AES.Encrypt(cSrc, cKey);
