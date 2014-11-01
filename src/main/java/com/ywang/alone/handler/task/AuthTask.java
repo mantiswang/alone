@@ -23,10 +23,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
+
+import redis.clients.jedis.Jedis;
 
 import com.alibaba.druid.pool.DruidPooledConnection;
 import com.alibaba.fastjson.JSON;
@@ -36,6 +37,7 @@ import com.ywang.alone.Constant;
 import com.ywang.alone.db.DataSourceFactory;
 import com.ywang.alone.modeles.UserInfo;
 import com.ywang.alone.utils.AloneUtil;
+import com.ywang.utils.JedisUtil;
 import com.ywang.utils.LoggerUtil;
 import com.ywang.utils.MD5;
 
@@ -52,6 +54,7 @@ public class AuthTask {
 	private static final int LOGIN = 2;
 	private static final int NEARBY = 3;
 	private static final int FOLLOW = 4;
+	private static final int GET_ALL_FOLLOWS = 5;
 
 	public static String execute(int code, String param) {
 
@@ -64,6 +67,8 @@ public class AuthTask {
 			return nearby(param);
 		case FOLLOW:
 			return follow(param);
+		case GET_ALL_FOLLOWS:
+			return getAllFollows(param);
 		default:
 			break;
 		}
@@ -89,9 +94,161 @@ public class AuthTask {
 			return jsonObject.toJSONString();
 		}
 	    
+	    Jedis jedis =  JedisUtil.getJedis();
+	    String userId = jedis.get("TOKEN:"+param.getString("key"));
+	    LoggerUtil.logMsg("uid is " + userId);
+	    if(StringUtils.isEmpty(userId))
+	    {
+	    	jsonObject.put("ret", 1);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+			return jsonObject.toJSONString();
+					 
+	    }
 	    
+		DruidPooledConnection conn = null;
+		PreparedStatement stmt = null;
+		try {
+			conn = DataSourceFactory.getInstance().getConn();
+
+			conn.setAutoCommit(false);
+			
+			String uuid = UUID.randomUUID().toString();
+			uuid = uuid.replaceAll("-", "");
+			
+			stmt = conn
+					.prepareStatement(
+							"insert into follow (USER_ID, FOLLOWED_ID, `TIME`) VALUES (?,?,?)",
+							Statement.RETURN_GENERATED_KEYS);
+			stmt.setString(1, userId);
+			stmt.setString(2, param.getString("fid").trim());
+			stmt.setLong(3,System.currentTimeMillis());
+			
+			int result = stmt.executeUpdate();
+			if (result == 1) {				
+				jsonObject.put("ret", 0);
+			} else {
+				jsonObject.put("ret", 2);
+				jsonObject.put("errCode", Constant.ErrorCode.UPDATE_DB_FAIL);
+				jsonObject.put("errDesc", Constant.ErrorDesc.UPDATE_DB_FAIL);
+			}
+				
+
+			conn.commit();
+			conn.setAutoCommit(true);
+		} catch (SQLException e) {
+			LoggerUtil.logServerErr(e);
+			jsonObject.put("ret", 2);
+			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
+			jsonObject.put("errDesc", Constant.ErrorDesc.SYS_ERR);
+		} finally {
+			try {
+				if (null != stmt) {
+					stmt.close();
+				}
+				if (null != conn) {
+					conn.close();
+				}
+			} catch (SQLException e) {
+				LoggerUtil.logServerErr(e.getMessage());
+			}
+		}
+
 		return jsonObject.toJSONString();
 	}
+	
+	/**
+	 * 获取所有关注的人 {
+	 * 'key':'2597aa1d37d432a', 'pNo':'0'
+	 * }
+	 * @param param 
+	 * @return
+	 */
+	private static String getAllFollows(String msg) {
+		JSONObject jsonObject = AloneUtil.newRetJsonObject();
+		JSONObject param = JSON.parseObject(msg);
+	    String token = param.getString("key");
+	    String userId = null;
+	    
+	    if (StringUtils.isEmpty(token)) {
+			jsonObject.put("ret", 1);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+		}
+	    else
+	    {
+	    	Jedis jedis =  JedisUtil.getJedis();
+		    userId = jedis.get("TOKEN:"+token);
+		    if(StringUtils.isEmpty(userId))
+		    {
+		    	jsonObject.put("ret", 1);
+				jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+				jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+						 
+		    }
+	    }
+	    
+	    if(StringUtils.isEmpty(userId))
+	    {
+			return jsonObject.toJSONString();
+	    }
+	    
+	    LoggerUtil.logMsg("uid is " + userId);
+
+	    
+		DruidPooledConnection conn = null;
+		PreparedStatement stmt = null;
+		try {
+			conn = DataSourceFactory.getInstance().getConn();
+			conn.setAutoCommit(false);
+			
+			stmt = conn
+					.prepareStatement(
+							"SELECT * FROM USERBASE WHERE USER_ID IN (SELECT FOLLOWED_ID FROM FOLLOW WHERE USER_ID = ?)");
+			stmt.setString(1, userId);
+			
+			ArrayList<UserInfo> followedList = new ArrayList<UserInfo>();
+			UserInfo userInfo = null;
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+
+				userInfo = new UserInfo();
+				userInfo.setUserId(rs.getString("USER_ID"));
+				userInfo.setAvatar(rs.getString("AVATAR"));
+				userInfo.setNickName(rs.getString("NICKNAME"));
+				userInfo.setAge(rs.getString("AGE"));
+				userInfo.setRoleName(rs.getString("ROLENAME"));
+				userInfo.setOnline(rs.getString("ONLINE"));
+				userInfo.setLastLoginTime(rs.getLong("LAST_LOGIN_TIME"));
+				userInfo.setIntro(rs.getString("INTRO"));
+				userInfo.setDistance(rs.getString("DISTANCE"));
+
+				followedList.add(userInfo);
+			}
+
+			conn.commit();
+			conn.setAutoCommit(true);
+		} catch (SQLException e) {
+			LoggerUtil.logServerErr(e);
+			jsonObject.put("ret", 2);
+			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
+			jsonObject.put("errDesc", Constant.ErrorDesc.SYS_ERR);
+		} finally {
+			try {
+				if (null != stmt) {
+					stmt.close();
+				}
+				if (null != conn) {
+					conn.close();
+				}
+			} catch (SQLException e) {
+				LoggerUtil.logServerErr(e.getMessage());
+			}
+		}
+
+		return jsonObject.toJSONString();
+	}
+	
 
 	/**
 	 * 附近的人
@@ -463,7 +620,7 @@ public class AuthTask {
 			}
 		}
 
-		return jsonObject.toString();
+		return jsonObject.toJSONString();
 	}
 
 	public static void main(String[] args) {

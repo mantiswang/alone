@@ -21,7 +21,7 @@ import java.sql.SQLException;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.pool.DruidPooledConnection;
-import com.ywang.utils.AloneConfiguration;
+import com.ywang.utils.Config;
 
 /*
  * song
@@ -34,11 +34,9 @@ public class DataSourceFactory {
 	private DruidDataSource dataSource = null;
 	private static DataSourceFactory factory = null;
 
-	private DataSourceFactory() throws SQLException {
+	private DataSourceFactory(Config config) throws SQLException {
 		
 		dataSource = new DruidDataSource();
-
-		AloneConfiguration config = AloneConfiguration.getInstance();
 		
 		dataSource.setUrl(config.getDbURL());
 		dataSource.setUsername(config.getDbUserName());
@@ -55,33 +53,22 @@ public class DataSourceFactory {
 		dataSource.setRemoveAbandonedTimeout(60);
 		dataSource.setLogAbandoned(true);
 
-		//五分钟输出一次状态到日志中
-//		dataSource.setConnectionProperties("druid.timeBetweenLogStatsMillis=900000");
-//		dataSource.setConnectionProperties("druid.stat.loggerName=druidLog");
-//		dataSource.setConnectionProperties("druid.stat.mergeSql=true");
-
-		// be advice: validation query cant work in Oracle.
 		dataSource.setValidationQuery("select 'song'");
 		dataSource.init();
 	}
 
 	// 初始化方法。
-	public static DataSourceFactory initFactory()
+	public static DataSourceFactory initFactory(Config cfg)
 			throws SQLException {
 
 		if (null == factory) {
-			factory = new DataSourceFactory();
+			factory = new DataSourceFactory(cfg);
 		}
 
 		return factory;
 	}
 
-	// 实例在使用时通过事先初始化，可随时被调用。
 	public static DataSourceFactory getInstance() throws SQLException {
-		if (null == factory) {
-			factory = new DataSourceFactory();
-		}
-
 		return factory;
 	}
 
