@@ -1,6 +1,7 @@
 package com.ywang.alone.handler;
 
 import com.ywang.alone.handler.task.AuthTask;
+import com.ywang.utils.LoggerUtil;
 
 public class AloneHandler {
 
@@ -39,7 +40,8 @@ public class AloneHandler {
 		default:
 			break;
 		}
-		return command + result;
+	    LoggerUtil.logMsg("command is "+ command + " ret is "+ result);
+		return result;
 	}
 
 }

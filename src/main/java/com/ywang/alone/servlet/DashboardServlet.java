@@ -2,6 +2,7 @@ package com.ywang.alone.servlet;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -59,7 +60,16 @@ public class DashboardServlet extends HttpServlet {
 	 */
 	protected void doPost(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
-
+//		BufferedReader br = new BufferedReader(new InputStreamReader(  
+//                (ServletInputStream) request.getInputStream(), "utf-8"));  
+//        StringBuffer sb = new StringBuffer("");  
+//        String temp;  
+//        while ((temp = br.readLine()) != null) {  
+//            sb.append(temp);  
+//        }  
+//        br.close();  
+		
+		
 		String message = request.getParameter("msg");
 		if (StringUtils.isBlank(message))
 			return;
