@@ -23,7 +23,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -85,7 +87,8 @@ public class AuthTask {
 		JSONObject jsonObject = AloneUtil.newRetJsonObject();
 		JSONObject param = JSON.parseObject(msg);
 		String token = param.getString("key");
-
+		String userId = null;
+		
 		if (StringUtils.isEmpty(token)) {
 			jsonObject.put("ret", 1);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
@@ -94,16 +97,27 @@ public class AuthTask {
 		}
 
 		Jedis jedis = JedisUtil.getJedis();
-		String userId = jedis.get("TOKEN:" + param.getString("key"));
-		LoggerUtil.logMsg("uid is " + userId);
+		Long tokenTtl = jedis.ttl("TOKEN:" + token);
+		if(tokenTtl == -1)
+		{
+			jsonObject.put("ret", 1);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+		}else
+		{
+			userId = jedis.get("TOKEN:" + token);
+			LoggerUtil.logMsg("uid is " + userId);
+		}
+		
+		JedisUtil.returnJedis(jedis);
+		
 		if (StringUtils.isEmpty(userId)) {
 			jsonObject.put("ret", 1);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 			return jsonObject.toJSONString();
-
 		}
-
+		
 		DruidPooledConnection conn = null;
 		PreparedStatement stmt = null;
 		try {
@@ -172,13 +186,24 @@ public class AuthTask {
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 		} else {
 			Jedis jedis = JedisUtil.getJedis();
-			userId = jedis.get("TOKEN:" + token);
-			if (StringUtils.isEmpty(userId)) {
+			Long tokenTtl = jedis.ttl("TOKEN:" + token);
+			if(tokenTtl == -1)
+			{
 				jsonObject.put("ret", 1);
 				jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 				jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
-
+				
+			}else
+			{
+				userId = jedis.get("TOKEN:" + token);
+				if (StringUtils.isEmpty(userId)) {
+					jsonObject.put("ret", 1);
+					jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+					jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+	
+				}
 			}
+			JedisUtil.returnJedis(jedis);
 		}
 
 		if (StringUtils.isEmpty(userId)) {
@@ -249,19 +274,45 @@ public class AuthTask {
 	 *    }
 	 * </pre>
 	 * 
-	 * @return
+	 * @return 
 	 */
 	private static String nearby(String msg) {
 		JSONObject jsonObject = AloneUtil.newRetJsonObject();
 		JSONObject user = JSON.parseObject(msg);
 
 		String token = user.getString("key");
+		String userId = null;
 		if (StringUtils.isEmpty(token)) {
 			jsonObject.put("ret", 1);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 			return jsonObject.toJSONString();
 		}
+		
+
+		Jedis jedis = JedisUtil.getJedis();
+		Long tokenTtl = jedis.ttl("TOKEN:" + token);
+		if(tokenTtl == -1)
+		{
+			jsonObject.put("ret", 1);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+		}else
+		{
+			userId = jedis.get("TOKEN:" + token);
+			LoggerUtil.logMsg("uid is " + userId);
+		}
+		
+		JedisUtil.returnJedis(jedis);
+		
+		if (StringUtils.isEmpty(userId)) {
+			jsonObject.put("ret", 1);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+			return jsonObject.toJSONString();
+		}
+		
+		
 
 		DruidPooledConnection conn = null;
 		PreparedStatement stmt = null;
@@ -371,6 +422,7 @@ public class AuthTask {
 			conn = DataSourceFactory.getInstance().getConn();
 			conn.setAutoCommit(false);
 			String token = user.getString("key");
+			String userId = null;
 			boolean needUpdateToken = false;
 
 			if (StringUtils.isEmpty(token)) {// 使用用户名密码登录
@@ -393,8 +445,9 @@ public class AuthTask {
 			ResultSet rs = stmt.executeQuery();
 			if (rs.next()) { // 登录
 				UserInfo userInfo = new UserInfo();
+				userId = rs.getString("USER_ID");
 				userInfo.setRegTime(rs.getLong("REG_TIME"));
-				userInfo.setUserId(rs.getString("USER_ID"));
+				userInfo.setUserId(userId);
 				userInfo.setAvatar(rs.getString("AVATAR"));
 				userInfo.setNickName(rs.getString("NICKNAME"));
 				userInfo.setAge(rs.getString("AGE"));
@@ -462,11 +515,24 @@ public class AuthTask {
 			// 没有用户，直接注册
 			else {
 				jsonObject = regNewUser(msg);
+				JSONObject data = jsonObject.getJSONObject("data");
+				userId = data.getString("userId");
+				LoggerUtil.logMsg("register succ userId is: " + userId);
 			}
 
 			rs.close();
 			conn.commit();
 			conn.setAutoCommit(true);
+		
+			
+			//更新redis
+			Jedis jedis = JedisUtil.getJedis();
+			jedis.set("TOKEN:" + token, userId);
+			jedis.expire("TOKEN:" + token, 86400 * 14);//两周失效
+			JedisUtil.returnJedis(jedis);
+			
+			
+			
 		} catch (SQLException e) {
 			LoggerUtil.logServerErr(e);
 			jsonObject.put("ret", 2);

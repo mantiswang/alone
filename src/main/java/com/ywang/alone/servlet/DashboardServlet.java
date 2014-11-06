@@ -2,7 +2,6 @@ package com.ywang.alone.servlet;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -76,7 +75,8 @@ public class DashboardServlet extends HttpServlet {
 
 		LoggerUtil.logMsg(message);
 		String result = AloneHandler.handler(message);
-
+		
+		response.setCharacterEncoding("UTF-8");
 		response.getWriter().print(result);
 	}
 

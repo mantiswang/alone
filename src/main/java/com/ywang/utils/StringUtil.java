@@ -18,6 +18,7 @@
 package com.ywang.utils;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /*
  * song
@@ -41,5 +42,10 @@ public class StringUtil {
 	public static String getUUID() {
 		UUID uuid = java.util.UUID.randomUUID();
 		return uuid.toString();
+	}
+	
+	public static void main(String[] args) {
+		int seconds = (int)TimeUnit.DAYS.toSeconds(1);
+		System.out.println(System.currentTimeMillis());
 	}
 }
