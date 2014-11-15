@@ -26,6 +26,20 @@ package com.ywang.alone;
  */
 public class Constant {
 
+	public interface RET
+	{
+		int SUCC = 0;
+		int NO_ACCESS_AUTH = 1;
+		int REG_SUCC = 101;
+		int TOKEN_UPDATE_FAIL = 3;
+		int SYS_ERR = 2;
+		int USER_EXISTS = 4;
+		int LOGIN_FAIL = 5;
+		int UPDATE_DB_FAIL = 6;
+		int PARAM_ILLEGAL = 8;
+				
+	}
+	
 	public interface ErrorCode
 	{
 		int SYS_ERR     = 1001;
@@ -34,8 +48,7 @@ public class Constant {
 		int TOKEN_UPDATE_FAIL = 9003;
 		int NO_ACCESS_AUTH = 9004;
 		int PARAM_ILLEGAL  = 9008;
-		int UPDATE_DB_FAIL = 9006;
-		
+		int UPDATE_DB_FAIL = 9006;	
 		
 	}
 	

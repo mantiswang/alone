@@ -18,6 +18,7 @@
 package com.ywang.alone.utils;
 
 import com.alibaba.fastjson.JSONObject;
+import com.ywang.alone.Constant.RET;
 
 /*
  * alone
@@ -32,7 +33,7 @@ public class AloneUtil {
 	{
 		JSONObject jsonObject = new JSONObject();
 		
-		jsonObject.put("ret", 0);
+		jsonObject.put("ret", RET.SUCC);
 		jsonObject.put("errCode", 0);
 		jsonObject.put("errDesc", "");
 		jsonObject.put("data", null);

@@ -23,9 +23,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.TimeZone;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -57,7 +55,13 @@ public class AuthTask {
 	private static final int NEARBY = 3;
 	private static final int FOLLOW = 4;
 	private static final int GET_ALL_FOLLOWS = 5;
-
+	private static final int GET_USERINFO = 6;
+	/**
+	 * 
+	 * @param code
+	 * @param param
+	 * @return ret 1
+	 */
 	public static String execute(int code, String param) {
 
 		switch (code) {
@@ -71,10 +75,145 @@ public class AuthTask {
 			return follow(param);
 		case GET_ALL_FOLLOWS:
 			return getAllFollows(param);
+		case GET_USERINFO:
+			return getUserInfo(param);
 		default:
 			break;
 		}
 		return null;
+	}
+
+	/**
+	 * 关注 { 'key':'2597aa1d37d432a','uid':'1020293' }
+	 * 
+	 * @param param
+	 * @return
+	 */
+	private static String getUserInfo(String msg) {
+		
+		JSONObject jsonObject = AloneUtil.newRetJsonObject();
+		JSONObject param = JSON.parseObject(msg);
+		String token = param.getString("key");
+		String userId = null;
+		
+		if (StringUtils.isEmpty(token)) {
+			jsonObject.put("ret", Constant.RET.NO_ACCESS_AUTH);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+			return jsonObject.toJSONString();
+		}
+
+		Jedis jedis = JedisUtil.getJedis();
+		Long tokenTtl = jedis.ttl("TOKEN:" + token);
+		if(tokenTtl == -1)
+		{
+			jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+		}else
+		{
+			userId = jedis.get("TOKEN:" + token);
+			LoggerUtil.logMsg("uid is " + userId);
+		}
+		
+		JedisUtil.returnJedis(jedis);
+		
+		if (StringUtils.isEmpty(userId)) {
+			jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+			return jsonObject.toJSONString();
+		}
+		
+		
+		String aimUid = param.getString("uid");
+		if (StringUtils.isEmpty(aimUid)) {
+			jsonObject.put("ret",  Constant.RET.PARAM_ILLEGAL);
+			jsonObject.put("errCode", Constant.ErrorCode.PARAM_ILLEGAL);
+			jsonObject.put("errDesc", Constant.ErrorDesc.PARAM_ILLEGAL);
+			return jsonObject.toJSONString();
+		}
+		DruidPooledConnection conn = null;
+		PreparedStatement stmt = null;
+		try {
+			conn = DataSourceFactory.getInstance().getConn();
+
+			conn.setAutoCommit(false);
+
+			stmt = conn
+					.prepareStatement(
+							"SELECT * FROM USERBASE WHERE USER_ID = ?",
+							Statement.RETURN_GENERATED_KEYS);
+			stmt.setString(1, aimUid);
+
+			ResultSet userInfoRs = stmt.executeQuery();
+			if(userInfoRs.next())
+			{
+				UserInfo userInfo = new UserInfo();
+				userInfo.setRegTime(userInfoRs.getLong("REG_TIME"));
+				userInfo.setUserId(userInfoRs.getString("USER_ID"));
+				userInfo.setAvatar(userInfoRs.getString("AVATAR"));
+				userInfo.setNickName(userInfoRs.getString("NICKNAME"));
+				userInfo.setAge(userInfoRs.getString("AGE"));
+				userInfo.setHoroscope(userInfoRs
+						.getString("HORO_SCOPE"));
+				userInfo.setHeight(userInfoRs.getString("HEIGHT"));
+				userInfo.setWeight(userInfoRs.getString("WEIGHT"));
+				userInfo.setRoleName(userInfoRs.getString("ROLENAME"));
+				userInfo.setAffection(userInfoRs.getString("AFFECTION"));
+				userInfo.setPurpose(userInfoRs.getString("PURPOSE"));
+				userInfo.setEthnicity(userInfoRs.getString("ETHNICITY"));
+				userInfo.setOccupation(userInfoRs
+						.getString("OCCUPATION"));
+				userInfo.setLivecity(userInfoRs.getString("LIVECITY"));
+				userInfo.setLocation(userInfoRs.getString("LOCATION"));
+				userInfo.setTravelcity(userInfoRs
+						.getString("TRAVELCITY"));
+				userInfo.setMovie(userInfoRs.getString("MOVIE"));
+				userInfo.setMusic(userInfoRs.getString("MUSIC"));
+				userInfo.setBooks(userInfoRs.getString("BOOKS"));
+				userInfo.setFood(userInfoRs.getString("FOOD"));
+				userInfo.setOthers(userInfoRs.getString("OTHERS"));
+				userInfo.setIntro(userInfoRs.getString("INTRO"));
+//				userInfo.setMessagePwd(userInfoRs
+//						.getString("MESSAGE_PWD"));
+				userInfo.setMessageUser(userInfoRs
+						.getString("MESSAGE_USER"));
+				userInfo.setKey(userInfoRs.getString("PKEY"));
+				userInfo.setOnline("1");
+
+				jsonObject.put("data", JSONObject.toJSON(userInfo));
+			}
+			else
+			{
+				jsonObject.put("ret", Constant.RET.SYS_ERR);
+				jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
+				jsonObject.put("errDesc", Constant.ErrorDesc.SYS_ERR);
+			}
+			
+			userInfoRs.close();
+			conn.commit();
+			conn.setAutoCommit(true);
+		} catch (SQLException e) {
+			LoggerUtil.logServerErr(e);
+			jsonObject.put("ret", Constant.RET.SYS_ERR);
+			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
+			jsonObject.put("errDesc", Constant.ErrorDesc.SYS_ERR);
+		} finally {
+			try {
+				if (null != stmt) {
+					stmt.close();
+				}
+				if (null != conn) {
+					conn.close();
+				}
+			} catch (SQLException e) {
+				LoggerUtil.logServerErr(e.getMessage());
+			}
+		}
+
+		return jsonObject.toJSONString();
+		
 	}
 
 	/**
@@ -90,7 +229,7 @@ public class AuthTask {
 		String userId = null;
 		
 		if (StringUtils.isEmpty(token)) {
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 			return jsonObject.toJSONString();
@@ -100,7 +239,7 @@ public class AuthTask {
 		Long tokenTtl = jedis.ttl("TOKEN:" + token);
 		if(tokenTtl == -1)
 		{
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret", Constant.RET.NO_ACCESS_AUTH);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 		}else
@@ -112,7 +251,7 @@ public class AuthTask {
 		JedisUtil.returnJedis(jedis);
 		
 		if (StringUtils.isEmpty(userId)) {
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret", Constant.RET.NO_ACCESS_AUTH);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 			return jsonObject.toJSONString();
@@ -125,9 +264,6 @@ public class AuthTask {
 
 			conn.setAutoCommit(false);
 
-			String uuid = UUID.randomUUID().toString();
-			uuid = uuid.replaceAll("-", "");
-
 			stmt = conn
 					.prepareStatement(
 							"insert into follow (USER_ID, FOLLOWED_ID, `TIME`) VALUES (?,?,?)",
@@ -137,10 +273,9 @@ public class AuthTask {
 			stmt.setLong(3, System.currentTimeMillis());
 
 			int result = stmt.executeUpdate();
-			if (result == 1) {
-				jsonObject.put("ret", 0);
-			} else {
-				jsonObject.put("ret", 2);
+			if (result != 1) {
+				
+				jsonObject.put("ret", Constant.RET.UPDATE_DB_FAIL);
 				jsonObject.put("errCode", Constant.ErrorCode.UPDATE_DB_FAIL);
 				jsonObject.put("errDesc", Constant.ErrorDesc.UPDATE_DB_FAIL);
 			}
@@ -149,7 +284,7 @@ public class AuthTask {
 			conn.setAutoCommit(true);
 		} catch (SQLException e) {
 			LoggerUtil.logServerErr(e);
-			jsonObject.put("ret", 2);
+			jsonObject.put("ret", Constant.RET.SYS_ERR);
 			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
 			jsonObject.put("errDesc", Constant.ErrorDesc.SYS_ERR);
 		} finally {
@@ -181,7 +316,7 @@ public class AuthTask {
 		String userId = null;
 
 		if (StringUtils.isEmpty(token)) {
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 		} else {
@@ -189,7 +324,7 @@ public class AuthTask {
 			Long tokenTtl = jedis.ttl("TOKEN:" + token);
 			if(tokenTtl == -1)
 			{
-				jsonObject.put("ret", 1);
+				jsonObject.put("ret", Constant.RET.NO_ACCESS_AUTH);
 				jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 				jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 				
@@ -197,7 +332,7 @@ public class AuthTask {
 			{
 				userId = jedis.get("TOKEN:" + token);
 				if (StringUtils.isEmpty(userId)) {
-					jsonObject.put("ret", 1);
+					jsonObject.put("ret", Constant.RET.NO_ACCESS_AUTH);
 					jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 					jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 	
@@ -245,7 +380,7 @@ public class AuthTask {
 			conn.setAutoCommit(true);
 		} catch (SQLException e) {
 			LoggerUtil.logServerErr(e);
-			jsonObject.put("ret", 2);
+			jsonObject.put("ret", Constant.RET.SYS_ERR);
 			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
 			jsonObject.put("errDesc", Constant.ErrorDesc.SYS_ERR);
 		} finally {
@@ -283,7 +418,7 @@ public class AuthTask {
 		String token = user.getString("key");
 		String userId = null;
 		if (StringUtils.isEmpty(token)) {
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret", Constant.RET.NO_ACCESS_AUTH);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 			return jsonObject.toJSONString();
@@ -294,7 +429,7 @@ public class AuthTask {
 		Long tokenTtl = jedis.ttl("TOKEN:" + token);
 		if(tokenTtl == -1)
 		{
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 		}else
@@ -306,7 +441,7 @@ public class AuthTask {
 		JedisUtil.returnJedis(jedis);
 		
 		if (StringUtils.isEmpty(userId)) {
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
 			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 			return jsonObject.toJSONString();
@@ -327,7 +462,7 @@ public class AuthTask {
 
 			ResultSet rs = stmt.executeQuery();
 			if (!rs.next()) {
-				jsonObject.put("ret", 1);
+				jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
 				jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
 				jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
 
@@ -373,7 +508,9 @@ public class AuthTask {
 			conn.setAutoCommit(true);
 		} catch (SQLException e) {
 			LoggerUtil.logServerErr(e);
-			jsonObject.put("ret", 2);
+			jsonObject.put("ret", Constant.RET.SYS_ERR);
+			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
+			jsonObject.put("errDesc", Constant.ErrorCode.SYS_ERR);
 		} finally {
 			try {
 				if (null != stmt) {
@@ -504,7 +641,7 @@ public class AuthTask {
 				int result = updatestmt.executeUpdate();
 
 				if (result != 1) {
-					jsonObject.put("ret", 1);
+					jsonObject.put("ret", Constant.RET.TOKEN_UPDATE_FAIL);
 					jsonObject.put("errCode",
 							Constant.ErrorCode.TOKEN_UPDATE_FAIL);
 					jsonObject.put("errDesc",
@@ -527,15 +664,15 @@ public class AuthTask {
 			
 			//更新redis
 			Jedis jedis = JedisUtil.getJedis();
-			jedis.set("TOKEN:" + token, userId);
-			jedis.expire("TOKEN:" + token, 86400 * 14);//两周失效
+			//两周失效
+			jedis.setex("TOKEN:" + token, 86400 * 14, userId);
 			JedisUtil.returnJedis(jedis);
 			
 			
 			
 		} catch (SQLException e) {
 			LoggerUtil.logServerErr(e);
-			jsonObject.put("ret", 2);
+			jsonObject.put("ret", Constant.RET.SYS_ERR);
 			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
 			jsonObject.put("errDesc", Constant.ErrorCode.SYS_ERR);
 		} finally {
@@ -647,9 +784,9 @@ public class AuthTask {
 					userInfoStmt.close();
 				}
 				idRS.close();
-				jsonObject.put("ret", 5);
+				jsonObject.put("ret", Constant.RET.REG_SUCC);
 			} else {
-				jsonObject.put("ret", 2);
+				jsonObject.put("ret", Constant.RET.SYS_ERR);
 				jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
 				jsonObject.put("errDesc", Constant.ErrorCode.SYS_ERR);
 				LoggerUtil.logServerErr("insert into userbase no result");
@@ -659,7 +796,7 @@ public class AuthTask {
 			conn.setAutoCommit(true);
 		} catch (SQLException e) {
 			LoggerUtil.logServerErr(e);
-			jsonObject.put("ret", 2);
+			jsonObject.put("ret", Constant.RET.SYS_ERR);
 			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
 			jsonObject.put("errDesc", Constant.ErrorCode.SYS_ERR);
 		} finally {
