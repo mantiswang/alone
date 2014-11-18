@@ -3,7 +3,6 @@ package com.ywang.alone.servlet;
 import java.io.File;
 import java.io.IOException;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import javax.servlet.ServletException;
@@ -16,26 +15,28 @@ import javax.servlet.http.Part;
 
 import org.apache.commons.lang3.StringUtils;
 
+import redis.clients.jedis.Jedis;
+
 import com.alibaba.druid.pool.DruidPooledConnection;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.sun.istack.internal.logging.Logger;
 import com.ywang.alone.Constant;
 import com.ywang.alone.db.DataSourceFactory;
 import com.ywang.alone.utils.AloneUtil;
-import com.ywang.alone.utils.UploadUtil;
+import com.ywang.utils.JedisUtil;
 import com.ywang.utils.LoggerUtil;
 import com.ywang.utils.MD5;
 
 /**
  * Servlet implementation class UploadAvatarServlet
  */
-@WebServlet(name = "UploadAvatarServlet", urlPatterns = "/api/uploadAvatar")
+@WebServlet(name = "UploadAvatarServlet", urlPatterns = "/api/uploadImage")
 @MultipartConfig( maxFileSize = 1024 * 1024 * 2)
 public class UploadAvatarServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static final String UPLOAD_DIR = "uploads";
-	private static final String AVATAR_DIR = "images/header";
-	private static final String PHOTO_DIR = "images/photo";
+	private static final String AVATAR_DIR = "/images/header";
+	private static final String PHOTO_DIR = "/images/photo";
 	/**
 	 * @see HttpServlet#HttpServlet()
 	 */
@@ -66,85 +67,103 @@ public class UploadAvatarServlet extends HttpServlet {
 		{
 			jsonObject.put("errDesc", Constant.ErrorDesc.PARAM_ILLEGAL);
 			jsonObject.put("errCode", Constant.ErrorCode.PARAM_ILLEGAL);
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret", Constant.RET.PARAM_ILLEGAL);
 			return;
 		}
 		LoggerUtil.logMsg(message);
 		JSONObject param = JSON.parseObject(message);
 		String token = param.getString("key");
 		int type = param.getIntValue("type");
+		String suffix = param.getString("suffix");
 		if (StringUtils.isEmpty(token)) {
 			jsonObject.put("errDesc", Constant.ErrorDesc.PARAM_ILLEGAL);
 			jsonObject.put("errCode", Constant.ErrorCode.PARAM_ILLEGAL);
-			jsonObject.put("ret", 1);
+			jsonObject.put("ret", Constant.RET.PARAM_ILLEGAL);
+			return;
+		}
+		
+		String userId = null;
+		Jedis jedis = JedisUtil.getJedis();
+		Long tokenTtl = jedis.ttl("TOKEN:" + token);
+		if(tokenTtl == -1)
+		{
+			jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
+			jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+			jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+		}else
+		{
+			userId = jedis.get("TOKEN:" + token);
+			LoggerUtil.logMsg("uid is " + userId);
+		}
+		
+		JedisUtil.returnJedis(jedis);
+		if(StringUtils.isEmpty(userId))
+		{
 			return;
 		}
 		
 		// gets absolute path of the web application
         String applicationPath = request.getServletContext().getRealPath("");
         // constructs path of the directory to save uploaded file
-        String uploadFilePath = applicationPath + File.separator + UPLOAD_DIR;
-		LoggerUtil.logMsg(uploadFilePath);
+		LoggerUtil.logMsg(applicationPath);
 
 		DruidPooledConnection conn = null;
 		PreparedStatement stmt = null;
+		String sql = null;
 		try {
-			conn = DataSourceFactory.getInstance().getConn();
-			conn.setAutoCommit(false);
-			stmt = conn
-					.prepareStatement("select USER_ID from userbase where PKEY = ? ");
-			stmt.setString(1, token);
-			ResultSet rs = stmt.executeQuery();
-			if (rs.next()) {
-				long userId = rs.getLong("USER_ID");
-				String subDir = AVATAR_DIR;
-				if(type == 2) //上传照片
-				{
-					long dir = userId/1000;
-					subDir = PHOTO_DIR + File.separator + dir;
-				}
-				
-				// creates the save directory if it does not exists
-				Part part = request.getPart("file");
-				String relativePath =  subDir + File.separator + MD5.getMD5String(System.currentTimeMillis()+"") + "_" + userId + "." + UploadUtil.getFileType(part);
-				String diskPath = uploadFilePath + File.separator + relativePath;
-				
-				File fileSaveDir = new File(diskPath).getParentFile();
-				if (!fileSaveDir.exists()) {
-					fileSaveDir.mkdirs();
-					LoggerUtil.logMsg("mkdirs------");
-				}
-				
-				part.write(diskPath);
-				LoggerUtil.logMsg(relativePath);
-				
-				PreparedStatement insertUploadStmt = conn
-						.prepareStatement("insert into uploads(USER_ID, TYPE, PHOTO_PATH) values(?,?,?)");
-				insertUploadStmt.setLong(1, userId);
-				insertUploadStmt.setInt(2, type);
-				insertUploadStmt.setString(3, relativePath);
-				
-				int result = insertUploadStmt.executeUpdate();
-				if (result != 1) {
-					jsonObject.put("ret", 2);
-					jsonObject.put("errCode", Constant.ErrorCode.UPDATE_DB_FAIL);
-					jsonObject.put("errDesc", Constant.ErrorDesc.UPDATE_DB_FAIL);
-				}
-				else
-				{
-					jsonObject.put("data", "{'imgPath':'" + relativePath + "'}");
-				}
-				insertUploadStmt.close();
-			}
-			else
+			
+			long l_userId = Long.parseLong(userId);
+			String subDir = AVATAR_DIR;
+			sql = "replace into avatar(USER_ID, UPLOAD_TIME, PHOTO_PATH) values(?,?,?)";
+			if(type == 2) //上传照片
 			{
-				jsonObject.put("ret", 1);
-				jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
-				jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+				long dir = l_userId/1000;
+				subDir = PHOTO_DIR + File.separator + dir;
+				sql = "insert into uploads(USER_ID, UPLOAD_TIME, PHOTO_PATH) values(?,?,?)";
 			}
+			
+			// creates the save directory if it does not exists
+			Part part = request.getPart("img");
+			String relativePath =  subDir + File.separator + MD5.getMD5String(System.currentTimeMillis()+"") + "_" + userId + "." + suffix;
+			String diskPath = applicationPath + File.separator + relativePath;
+			LoggerUtil.logMsg(diskPath);
+			
+			File fileSaveDir = new File(diskPath).getParentFile();
+			if (!fileSaveDir.exists()) {
+				fileSaveDir.mkdirs();
+				LoggerUtil.logMsg("mkdirs------");
+			}
+			
+			part.write(diskPath);
+			LoggerUtil.logMsg(relativePath);
+			
+			conn = DataSourceFactory.getInstance().getConn();
+		    stmt = conn.prepareStatement(sql);
+			stmt.setString(1, userId);
+			stmt.setLong(2, System.currentTimeMillis());
+			stmt.setString(3, relativePath);
+			LoggerUtil.logMsg("userId is "+ userId + " time " + System.currentTimeMillis() + " relativePath " + relativePath);
+			 
+			stmt.executeUpdate();
+			JSONObject obj = new JSONObject();
+		    obj.put("imgPath", relativePath);
+			jsonObject.put("data", JSONObject.toJSON(obj));
+//			int result = stmt.executeUpdate();
+//			if (result != 1) {
+//				jsonObject.put("ret", Constant.RET.UPDATE_DB_FAIL);
+//				jsonObject.put("errCode", Constant.ErrorCode.UPDATE_DB_FAIL);
+//				jsonObject.put("errDesc", Constant.ErrorDesc.UPDATE_DB_FAIL);
+//			}
+//			else
+//			{
+//				JSONObject obj = new JSONObject();
+//			    obj.put("imgPath", relativePath);
+//				jsonObject.put("data", JSONObject.toJSON(obj));
+//			}
+			
 		}catch (SQLException e) {
 			LoggerUtil.logServerErr(e);
-			jsonObject.put("ret", 2);
+			jsonObject.put("ret", Constant.RET.SYS_ERR);
 			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
 			jsonObject.put("errDesc", Constant.ErrorDesc.SYS_ERR);
 			
