@@ -109,19 +109,16 @@ public class UploadAvatarServlet extends HttpServlet {
 
 		DruidPooledConnection conn = null;
 		PreparedStatement stmt = null;
-		String sql = null;
 		try {
 			
 			long l_userId = Long.parseLong(userId);
+			//存储图片
 			String subDir = AVATAR_DIR;
-			sql = "replace into avatar(USER_ID, UPLOAD_TIME, PHOTO_PATH) values(?,?,?)";
 			if(type == 2) //上传照片
 			{
 				long dir = l_userId/1000;
 				subDir = PHOTO_DIR + File.separator + dir;
-				sql = "insert into uploads(USER_ID, UPLOAD_TIME, PHOTO_PATH) values(?,?,?)";
 			}
-			
 			// creates the save directory if it does not exists
 			Part part = request.getPart("img");
 			String relativePath =  subDir + File.separator + MD5.getMD5String(System.currentTimeMillis()+"") + "_" + userId + "." + suffix;
@@ -137,29 +134,36 @@ public class UploadAvatarServlet extends HttpServlet {
 			part.write(diskPath);
 			LoggerUtil.logMsg(relativePath);
 			
+			//入库
 			conn = DataSourceFactory.getInstance().getConn();
-		    stmt = conn.prepareStatement(sql);
-			stmt.setString(1, userId);
-			stmt.setLong(2, System.currentTimeMillis());
-			stmt.setString(3, relativePath);
+			if(type == 2) //上传照片
+			{
+				long dir = l_userId/1000;
+				subDir = PHOTO_DIR + File.separator + dir;
+				stmt = conn.prepareStatement("insert into uploads(USER_ID, UPLOAD_TIME, PHOTO_PATH, ENABLING) values(?,?,?,?)");
+				stmt.setString(1, userId);
+				stmt.setLong(2, System.currentTimeMillis());
+				stmt.setString(3, relativePath);
+				stmt.setInt(4, 1);
+			}
+			else
+			{
+				stmt = conn.prepareStatement("update userbase set avatar = ? where USER_ID = ?");
+				stmt.setString(1, relativePath);
+				stmt.setString(2, userId);
+			}
+		    
 			LoggerUtil.logMsg("userId is "+ userId + " time " + System.currentTimeMillis() + " relativePath " + relativePath);
 			 
-			stmt.executeUpdate();
+			int result = stmt.executeUpdate();
+			if(result != 1)
+			{
+				LoggerUtil.logMsg("update failure....../ ");
+				
+			}
 			JSONObject obj = new JSONObject();
 		    obj.put("imgPath", relativePath);
 			jsonObject.put("data", JSONObject.toJSON(obj));
-//			int result = stmt.executeUpdate();
-//			if (result != 1) {
-//				jsonObject.put("ret", Constant.RET.UPDATE_DB_FAIL);
-//				jsonObject.put("errCode", Constant.ErrorCode.UPDATE_DB_FAIL);
-//				jsonObject.put("errDesc", Constant.ErrorDesc.UPDATE_DB_FAIL);
-//			}
-//			else
-//			{
-//				JSONObject obj = new JSONObject();
-//			    obj.put("imgPath", relativePath);
-//				jsonObject.put("data", JSONObject.toJSON(obj));
-//			}
 			
 		}catch (SQLException e) {
 			LoggerUtil.logServerErr(e);

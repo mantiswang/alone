@@ -126,15 +126,13 @@ public class AuthTask {
 		}
 		
 		
-		String aimUid = param.getString("uid");
+		String aimUid = param.getString("uid");//如果没有uid，即为自己的个人信息
 		if (StringUtils.isEmpty(aimUid)) {
-			jsonObject.put("ret",  Constant.RET.PARAM_ILLEGAL);
-			jsonObject.put("errCode", Constant.ErrorCode.PARAM_ILLEGAL);
-			jsonObject.put("errDesc", Constant.ErrorDesc.PARAM_ILLEGAL);
-			return jsonObject.toJSONString();
+			aimUid = userId;
 		}
 		DruidPooledConnection conn = null;
 		PreparedStatement stmt = null;
+		JSONObject data = new JSONObject();
 		try {
 			conn = DataSourceFactory.getInstance().getConn();
 
@@ -155,34 +153,49 @@ public class AuthTask {
 				userInfo.setAvatar(userInfoRs.getString("AVATAR"));
 				userInfo.setNickName(userInfoRs.getString("NICKNAME"));
 				userInfo.setAge(userInfoRs.getString("AGE"));
-				userInfo.setHoroscope(userInfoRs
-						.getString("HORO_SCOPE"));
+				userInfo.setHoroscope(userInfoRs.getString("HORO_SCOPE"));
 				userInfo.setHeight(userInfoRs.getString("HEIGHT"));
 				userInfo.setWeight(userInfoRs.getString("WEIGHT"));
 				userInfo.setRoleName(userInfoRs.getString("ROLENAME"));
 				userInfo.setAffection(userInfoRs.getString("AFFECTION"));
 				userInfo.setPurpose(userInfoRs.getString("PURPOSE"));
 				userInfo.setEthnicity(userInfoRs.getString("ETHNICITY"));
-				userInfo.setOccupation(userInfoRs
-						.getString("OCCUPATION"));
+				userInfo.setOccupation(userInfoRs.getString("OCCUPATION"));
 				userInfo.setLivecity(userInfoRs.getString("LIVECITY"));
 				userInfo.setLocation(userInfoRs.getString("LOCATION"));
-				userInfo.setTravelcity(userInfoRs
-						.getString("TRAVELCITY"));
+				userInfo.setTravelcity(userInfoRs.getString("TRAVELCITY"));
 				userInfo.setMovie(userInfoRs.getString("MOVIE"));
 				userInfo.setMusic(userInfoRs.getString("MUSIC"));
 				userInfo.setBooks(userInfoRs.getString("BOOKS"));
 				userInfo.setFood(userInfoRs.getString("FOOD"));
 				userInfo.setOthers(userInfoRs.getString("OTHERS"));
 				userInfo.setIntro(userInfoRs.getString("INTRO"));
+				userInfo.setLastLoginTime(userInfoRs.getLong("LAST_LOGIN_TIME"));
 //				userInfo.setMessagePwd(userInfoRs
 //						.getString("MESSAGE_PWD"));
-				userInfo.setMessageUser(userInfoRs
-						.getString("MESSAGE_USER"));
-				userInfo.setKey(userInfoRs.getString("PKEY"));
+				userInfo.setMessageUser(userInfoRs.getString("MESSAGE_USER"));
+//			
 				userInfo.setOnline("1");
 
-				jsonObject.put("data", JSONObject.toJSON(userInfo));
+				data.put("userInfo", JSONObject.toJSON(userInfo));
+				
+				PreparedStatement pstmt = conn.prepareStatement(
+						"SELECT * FROM uploads WHERE USER_ID = ? and ENABLING=1",
+						Statement.RETURN_GENERATED_KEYS);
+				pstmt.setString(1, aimUid);	
+				
+				ResultSet pSet = pstmt.executeQuery();
+				JSONArray jsonArray = new JSONArray();
+				while(pSet.next())
+				{
+					jsonArray.add(pSet.getString("PHOTO_PATH"));
+				}
+				data.put("photos", JSONObject.toJSON(jsonArray));
+				jsonObject.put("data", JSONObject.toJSON(data));
+				
+				pSet.close();
+				pstmt.close();
+				
 			}
 			else
 			{
@@ -476,12 +489,13 @@ public class AuthTask {
 							+ "ROUND(6378.138 * 2 * ASIN(SQRT(POW(SIN((? * PI()/180-lat * PI()/180)/2),2) +"
 							+ " COS(? * PI()/180) * COS(lat * PI()/180) * POW(SIN((? * PI()/180-lng * PI()/180)/2),2))) * 1000) "
 							+ " AS  DISTANCE "
-							+ "FROM userbase ORDER BY distance LIMIT ?,?");
+							+ "FROM userbase WHERE USER_ID <> ? ORDER BY distance LIMIT ?,?");
 			nearbyStmt.setString(1, user.getString("lat"));
 			nearbyStmt.setString(2, user.getString("lat"));
 			nearbyStmt.setString(3, user.getString("lng"));
-			nearbyStmt.setInt(4, Integer.valueOf(user.getString("currPage")));
-			nearbyStmt.setInt(5, Integer.valueOf(user.getString("pageSize")));
+			nearbyStmt.setString(4, userId);
+			nearbyStmt.setInt(5, Integer.valueOf(user.getString("currPage")));
+			nearbyStmt.setInt(6, Integer.valueOf(user.getString("pageSize")));
 
 			JSONArray nearbyUserArray = new JSONArray();
 			UserInfo userInfo = null;
@@ -569,14 +583,33 @@ public class AuthTask {
 				token = MD5.getMD5String(uuid);
 
 				stmt = conn
-						.prepareStatement("select * from userbase where PHONE_NUM = ? and PWD = ?");
+						.prepareStatement("SELECT * FROM userbase WHERE PHONE_NUM = ? AND PWD = ? ");
 				stmt.setString(1, user.getString("phoneNum"));
 				stmt.setString(2, user.getString("password"));
 
 			} else {// 使用 token 登录
+				Jedis jedis = JedisUtil.getJedis();
+				Long tokenTtl = jedis.ttl("TOKEN:" + token);
+				if(tokenTtl == -1)
+				{
+					jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
+					jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
+					jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
+				}else
+				{
+					userId = jedis.get("TOKEN:" + token);
+					LoggerUtil.logMsg("uid is " + userId + "");
+				}
+				
+				JedisUtil.returnJedis(jedis);
+				
+				if(StringUtils.isEmpty(userId + ""))
+				{
+					return jsonObject.toJSONString();
+				}
 				stmt = conn
-						.prepareStatement("select * from userbase where PKEY = ? ");
-				stmt.setString(1, token);
+						.prepareStatement("SELECT * FROM userbase WHERE u.user_id = ?");
+				stmt.setString(1, userId + "");
 			}
 
 			ResultSet rs = stmt.executeQuery();
@@ -584,7 +617,7 @@ public class AuthTask {
 				UserInfo userInfo = new UserInfo();
 				userId = rs.getString("USER_ID");
 				userInfo.setRegTime(rs.getLong("REG_TIME"));
-				userInfo.setUserId(userId);
+				userInfo.setUserId(userId + "");
 				userInfo.setAvatar(rs.getString("AVATAR"));
 				userInfo.setNickName(rs.getString("NICKNAME"));
 				userInfo.setAge(rs.getString("AGE"));
@@ -654,7 +687,8 @@ public class AuthTask {
 				jsonObject = regNewUser(msg);
 				JSONObject data = jsonObject.getJSONObject("data");
 				userId = data.getString("userId");
-				LoggerUtil.logMsg("register succ userId is: " + userId);
+				token = data.getString("key");
+				LoggerUtil.logMsg("register succ userId is: " + userId + " token is "+ token);
 			}
 
 			rs.close();
@@ -665,7 +699,7 @@ public class AuthTask {
 			//更新redis
 			Jedis jedis = JedisUtil.getJedis();
 			//两周失效
-			jedis.setex("TOKEN:" + token, 86400 * 14, userId);
+			jedis.setex("TOKEN:" + token, 86400 * 14, userId + "");
 			JedisUtil.returnJedis(jedis);
 			
 			
@@ -714,13 +748,21 @@ public class AuthTask {
 			uuid = uuid.replaceAll("-", "");
 			String token = MD5.getMD5String(uuid);
 
+			String im_user = user.getString("phoneNum").trim();
+			UserInfo userInfo = new UserInfo();
+			userInfo.setRegTime(System.currentTimeMillis());
+			userInfo.setOnline("1");
+			userInfo.setKey(token);
+			userInfo.setMessageUser(im_user);
+			userInfo.setMessagePwd("alone123456");
+			
 			updatestmt = conn
 					.prepareStatement(
 							"insert into userbase (PHONE_NUM, PWD, REG_TIME, LNG, LAT, DEVICE_TOKEN, SYSTEM_TYPE, OS_VERSION,PHONE_MODEL, PKEY, MESSAGE_USER, MESSAGE_PWD) VALUES (?,?,?, ?,?,?,?,?,?,?,?,?)",
 							Statement.RETURN_GENERATED_KEYS);
 			updatestmt.setString(1, user.getString("phoneNum").trim());
 			updatestmt.setString(2, user.getString("password").trim());
-			updatestmt.setLong(3, System.currentTimeMillis());
+			updatestmt.setLong(3, userInfo.getRegTime());
 			updatestmt.setString(4, user.getString("lng").trim());
 			updatestmt.setString(5, user.getString("lat").trim());
 
@@ -728,63 +770,20 @@ public class AuthTask {
 			updatestmt.setString(7, user.getString("systemType").trim());
 			updatestmt.setString(8, user.getString("osVersion").trim());
 			updatestmt.setString(9, user.getString("phoneModel").trim());
-			updatestmt.setString(10, token);
-			updatestmt.setString(11, user.getString("phoneNum").trim());
+			updatestmt.setString(10, userInfo.getKey());
+			updatestmt.setString(11, userInfo.getMessageUser());
 			updatestmt.setString(12, "alone123456");
 
 			int result = updatestmt.executeUpdate();
 
 			if (result == 1) {
-
 				ResultSet idRS = updatestmt.getGeneratedKeys();
 				if (idRS.next()) {
 					int userId = idRS.getInt(1);
-					PreparedStatement userInfoStmt = conn
-							.prepareStatement("select * from userbase where USER_ID = ? ");
-					userInfoStmt.setInt(1, userId);
-
-					ResultSet userInfoRs = userInfoStmt.executeQuery();
-					if (userInfoRs.next()) {
-						UserInfo userInfo = new UserInfo();
-						userInfo.setRegTime(userInfoRs.getLong("REG_TIME"));
-						userInfo.setUserId(userInfoRs.getString("USER_ID"));
-						userInfo.setAvatar(userInfoRs.getString("AVATAR"));
-						userInfo.setNickName(userInfoRs.getString("NICKNAME"));
-						userInfo.setAge(userInfoRs.getString("AGE"));
-						userInfo.setHoroscope(userInfoRs
-								.getString("HORO_SCOPE"));
-						userInfo.setHeight(userInfoRs.getString("HEIGHT"));
-						userInfo.setWeight(userInfoRs.getString("WEIGHT"));
-						userInfo.setRoleName(userInfoRs.getString("ROLENAME"));
-						userInfo.setAffection(userInfoRs.getString("AFFECTION"));
-						userInfo.setPurpose(userInfoRs.getString("PURPOSE"));
-						userInfo.setEthnicity(userInfoRs.getString("ETHNICITY"));
-						userInfo.setOccupation(userInfoRs
-								.getString("OCCUPATION"));
-						userInfo.setLivecity(userInfoRs.getString("LIVECITY"));
-						userInfo.setLocation(userInfoRs.getString("LOCATION"));
-						userInfo.setTravelcity(userInfoRs
-								.getString("TRAVELCITY"));
-						userInfo.setMovie(userInfoRs.getString("MOVIE"));
-						userInfo.setMusic(userInfoRs.getString("MUSIC"));
-						userInfo.setBooks(userInfoRs.getString("BOOKS"));
-						userInfo.setFood(userInfoRs.getString("FOOD"));
-						userInfo.setOthers(userInfoRs.getString("OTHERS"));
-						userInfo.setIntro(userInfoRs.getString("INTRO"));
-						userInfo.setMessagePwd(userInfoRs
-								.getString("MESSAGE_PWD"));
-						userInfo.setMessageUser(userInfoRs
-								.getString("MESSAGE_USER"));
-						userInfo.setKey(userInfoRs.getString("PKEY"));
-						userInfo.setOnline("1");
-
-						jsonObject.put("data", JSONObject.toJSON(userInfo));
-					}
-					userInfoRs.close();
-					userInfoStmt.close();
+					userInfo.setUserId(userId+"");
 				}
-				idRS.close();
 				jsonObject.put("ret", Constant.RET.REG_SUCC);
+				jsonObject.put("data", userInfo);
 			} else {
 				jsonObject.put("ret", Constant.RET.SYS_ERR);
 				jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
