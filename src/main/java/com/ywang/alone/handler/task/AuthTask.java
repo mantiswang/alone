@@ -468,38 +468,24 @@ public class AuthTask {
 
 			conn = DataSourceFactory.getInstance().getConn();
 			conn.setAutoCommit(false);
-			// 检查是否登录
-			stmt = conn
-					.prepareStatement("select USER_ID from userbase where PKEY = ?");
-			stmt.setString(1, token);
-
-			ResultSet rs = stmt.executeQuery();
-			if (!rs.next()) {
-				jsonObject.put("ret",  Constant.RET.NO_ACCESS_AUTH);
-				jsonObject.put("errCode", Constant.ErrorCode.NO_ACCESS_AUTH);
-				jsonObject.put("errDesc", Constant.ErrorDesc.NO_ACCESS_AUTH);
-
-				rs.close();
-				return jsonObject.toJSONString();
-			}
 
 			// TODO 把需要的column 列出来
-			PreparedStatement nearbyStmt = conn
-					.prepareStatement("SELECT USER_ID,AVATAR,NICKNAME,AGE,ROLENAME,`ONLINE`,LAST_LOGIN_TIME,INTRO,"
+			stmt = conn
+					.prepareStatement("SELECT USER_ID,AVATAR,NICKNAME,AGE,ROLENAME,`ONLINE`,LAST_LOGIN_TIME,INTRO, MESSAGE_USER,"
 							+ "ROUND(6378.138 * 2 * ASIN(SQRT(POW(SIN((? * PI()/180-lat * PI()/180)/2),2) +"
 							+ " COS(? * PI()/180) * COS(lat * PI()/180) * POW(SIN((? * PI()/180-lng * PI()/180)/2),2))) * 1000) "
 							+ " AS  DISTANCE "
 							+ "FROM userbase WHERE USER_ID <> ? ORDER BY distance LIMIT ?,?");
-			nearbyStmt.setString(1, user.getString("lat"));
-			nearbyStmt.setString(2, user.getString("lat"));
-			nearbyStmt.setString(3, user.getString("lng"));
-			nearbyStmt.setString(4, userId);
-			nearbyStmt.setInt(5, Integer.valueOf(user.getString("currPage")));
-			nearbyStmt.setInt(6, Integer.valueOf(user.getString("pageSize")));
+			stmt.setString(1, user.getString("lat"));
+			stmt.setString(2, user.getString("lat"));
+			stmt.setString(3, user.getString("lng"));
+			stmt.setString(4, userId);
+			stmt.setInt(5, Integer.valueOf(user.getString("currPage")));
+			stmt.setInt(6, Integer.valueOf(user.getString("pageSize")));
 
 			JSONArray nearbyUserArray = new JSONArray();
 			UserInfo userInfo = null;
-			ResultSet nearbyRs = nearbyStmt.executeQuery();
+			ResultSet nearbyRs = stmt.executeQuery();
 			while (nearbyRs.next()) {
 
 				userInfo = new UserInfo();
@@ -512,7 +498,7 @@ public class AuthTask {
 				userInfo.setLastLoginTime(nearbyRs.getLong("LAST_LOGIN_TIME"));
 				userInfo.setIntro(nearbyRs.getString("INTRO"));
 				userInfo.setDistance(nearbyRs.getString("DISTANCE"));
-
+				userInfo.setMessageUser(nearbyRs.getString("MESSAGE_USER"));
 				nearbyUserArray.add(userInfo);
 			}
 			jsonObject.put("data", nearbyUserArray);
