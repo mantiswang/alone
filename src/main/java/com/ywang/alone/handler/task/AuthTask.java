@@ -594,7 +594,7 @@ public class AuthTask {
 					return jsonObject.toJSONString();
 				}
 				stmt = conn
-						.prepareStatement("SELECT * FROM userbase WHERE u.user_id = ?");
+						.prepareStatement("SELECT * FROM userbase WHERE user_id = ?");
 				stmt.setString(1, userId + "");
 			}
 
@@ -694,7 +694,7 @@ public class AuthTask {
 			LoggerUtil.logServerErr(e);
 			jsonObject.put("ret", Constant.RET.SYS_ERR);
 			jsonObject.put("errCode", Constant.ErrorCode.SYS_ERR);
-			jsonObject.put("errDesc", Constant.ErrorCode.SYS_ERR);
+			jsonObject.put("errDesc", Constant.ErrorDesc.SYS_ERR);
 		} finally {
 			try {
 				if (null != stmt) {
